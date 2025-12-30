@@ -85,3 +85,44 @@ SELECT
     NULL AS prd_end_dt
 FROM DataWarehouse.bronze_prd_info
 WHERE prd_start_dt IS NOT NULL;
+
+-- Loading silver_crm_sales_details
+insert into DataWarehouse.silver_crm_sales_details(
+sls_ord_num,
+sls_prd_key,
+sls_cust_id,
+sls_order_dt,
+sls_ship_dt,
+sls_due_dt,
+sls_sales,
+sls_quantity,
+sls_price)
+select 
+sls_ord_num,
+sls_prd_key,
+sls_cust_id,
+CASE 
+    WHEN sls_order_dt = 0 OR LENGTH(sls_order_dt) != 8 THEN NULL
+    ELSE CAST(CAST(sls_order_dt AS CHAR(50)) AS DATE)
+END AS sls_order_dt,
+CASE 
+    WHEN sls_ship_dt = 0 OR LENGTH(sls_ship_dt) != 8 THEN NULL
+    ELSE CAST(CAST(sls_ship_dt AS CHAR(50)) AS DATE)
+END AS sls_ship_dt,
+CASE 
+    WHEN sls_due_dt = 0 OR LENGTH(sls_due_dt) != 8 THEN NULL
+    ELSE CAST(CAST(sls_due_dt AS CHAR(50)) AS DATE)
+END AS sls_due_dt,
+case
+	when sls_sales is null or sls_sales<=0 or sls_sales!=sls_quantity*abs(sls_price)
+		then sls_quantity*abs(sls_price)
+	else sls_sales
+end as sls_sales,
+sls_quantity,
+case
+	when sls_price is null or sls_price<=0
+		then sls_sales/nullif(sls_quantity,0)
+	else sls_price
+end as sls_price
+from DataWarehouse.bronze_sales_details;
+
